@@ -243,5 +243,88 @@
     })();
   </script>
 
+  <script id="v2-decor-editor">
+    (() => {
+      if (new URLSearchParams(location.search).get('edit') !== 'decor') return;
+      const profile = new URLSearchParams(location.search).get('profile') || 'desktop-narrow';
+      const storageKey = profile === 'mobile' ? 'soloveyart-decor-layout-v3-mobile' : 'soloveyart-decor-layout-v2-' + profile;
+      const items = [...document.querySelectorAll('.v2orn')];
+      const names = {
+        'v2orn-hero': 'Верхний объект',
+        'v2orn-paint': 'Волна краски',
+        'v2orn-yarn': 'Клубок с иглой',
+        'v2orn-wax': 'Светлый воск',
+        'v2orn-bubbles': 'Капли',
+        'v2orn-flowers-left': 'Левые цветы',
+        'v2orn-flowers-right': 'Правые цветы'
+      };
+      const idOf = element => [...element.classList].find(name => name.startsWith('v2orn-') && name !== 'v2orn');
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      items.forEach(element => {
+        const value = saved[idOf(element)];
+        if (!value) return;
+        element.style.left = value.left + 'px';
+        element.style.top = value.top + 'px';
+        element.style.right = 'auto';
+        element.style.bottom = 'auto';
+      });
+      document.body.classList.add('v2decor-edit');
+      const panel = document.createElement('aside');
+      panel.className = 'v2decor-panel is-collapsed';
+      const profileNames = {'desktop-wide':'широкий десктоп','desktop-narrow':'ноутбук','mobile':'мобильная версия'};
+      panel.innerHTML = '<button class="v2decor-toggle" type="button" aria-expanded="false">PNG · ' + (profileNames[profile] || profile) + '</button><div class="v2decor-body"><strong>Расстановка PNG</strong><span>Перетаскивай объекты — всё сохраняется автоматически.</span><output>Выбери любой PNG</output><button class="v2decor-reset" type="button">Сбросить этот режим</button></div>';
+      document.body.append(panel);
+      const output = panel.querySelector('output');
+      panel.querySelector('.v2decor-toggle').addEventListener('click', event => {
+        panel.classList.toggle('is-collapsed');
+        event.currentTarget.setAttribute('aria-expanded', String(!panel.classList.contains('is-collapsed')));
+      });
+      const store = () => {
+        const data = {};
+        items.forEach(element => {
+          const id = idOf(element);
+          if (element.style.left && element.style.top) data[id] = {left: parseFloat(element.style.left), top: parseFloat(element.style.top)};
+        });
+        localStorage.setItem(storageKey, JSON.stringify(data));
+      };
+      items.forEach(element => {
+        element.addEventListener('pointerdown', event => {
+          event.preventDefault();
+          const parentRect = element.offsetParent.getBoundingClientRect();
+          const rect = element.getBoundingClientRect();
+          const startX = event.clientX;
+          const startY = event.clientY;
+          const startLeft = rect.left - parentRect.left;
+          const startTop = rect.top - parentRect.top;
+          element.style.left = startLeft + 'px';
+          element.style.top = startTop + 'px';
+          element.style.right = 'auto';
+          element.style.bottom = 'auto';
+          element.setPointerCapture(event.pointerId);
+          const move = moveEvent => {
+            const left = Math.round(startLeft + moveEvent.clientX - startX);
+            const top = Math.round(startTop + moveEvent.clientY - startY);
+            element.style.left = left + 'px';
+            element.style.top = top + 'px';
+            output.textContent = (names[idOf(element)] || 'PNG') + ': x ' + left + ', y ' + top;
+          };
+          const finish = () => {
+            element.removeEventListener('pointermove', move);
+            element.removeEventListener('pointerup', finish);
+            element.removeEventListener('pointercancel', finish);
+            store();
+          };
+          element.addEventListener('pointermove', move);
+          element.addEventListener('pointerup', finish);
+          element.addEventListener('pointercancel', finish);
+        });
+      });
+      panel.querySelector('.v2decor-reset').addEventListener('click', () => {
+        localStorage.removeItem(storageKey);
+        location.reload();
+      });
+    })();
+  </script>
+
 </body>
 </html>
