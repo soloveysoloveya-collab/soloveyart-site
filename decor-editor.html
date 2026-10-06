@@ -40,7 +40,7 @@
       const select=(profile,width)=>{
         current={profile,width};
         buttons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.profile===profile)));
-        frame.src='index.html?edit=decor&profile='+encodeURIComponent(profile)+'&v=editor-scroll-2';
+        frame.src='index.html?edit=decor&profile='+encodeURIComponent(profile)+'&v=editor-save-3';
         layout();
       };
       buttons.forEach(button=>button.addEventListener('click',()=>select(button.dataset.profile,Number(button.dataset.width))));

@@ -319,7 +319,8 @@
             const top = Math.round(startTop + moveEvent.clientY - startY);
             element.style.left = left + 'px';
             element.style.top = top + 'px';
-            output.textContent = (names[idOf(element)] || 'PNG') + ': x ' + left + ', y ' + top;
+            store();
+            output.textContent = (names[idOf(element)] || 'PNG') + ': x ' + left + ', y ' + top + ' · сохранено';
           };
           const finish = () => {
             element.removeEventListener('pointermove', move);
