@@ -39,10 +39,11 @@
     .s19heroimage{position:absolute;z-index:1;inset:0;width:100%;height:100%;max-width:none;display:block;object-fit:cover;object-position:center 68%;background:transparent}
     html,body{overflow-x:hidden!important}
     .v2orn{display:none;position:absolute;z-index:5;max-width:none;pointer-events:none;user-select:none;filter:drop-shadow(0 12px 18px rgba(20,8,5,.22))}
-    body.v2decor-edit .v2orn{display:block!important;pointer-events:auto;cursor:grab;touch-action:none;outline:2px dashed rgba(255,190,128,.75);outline-offset:5px}
+    body.v2decor-edit .v2orn{display:block!important;pointer-events:none;outline:2px dashed rgba(255,190,128,.75);outline-offset:5px}
+    body.v2decor-edit.v2decor-drag .v2orn{pointer-events:auto;cursor:grab;touch-action:none}
     body.v2decor-edit .v2orn:active{cursor:grabbing;outline-color:#fff2df}
     .v2decor-panel{position:fixed;z-index:99999;right:14px;top:14px;width:min(280px,calc(100vw - 28px));padding:13px 14px;border:1px solid rgba(255,223,193,.4);border-radius:18px;background:rgba(47,24,25,.94);box-shadow:0 14px 42px rgba(15,5,5,.42);color:#fff7ef;font:500 13px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;backdrop-filter:blur(12px)}
-    .v2decor-panel strong{display:block;margin-bottom:4px;color:#ffd4a9;font:700 15px/1.2 'Avenir Next','Arial Rounded MT Bold','Segoe UI',Arial,sans-serif}.v2decor-panel span{display:block;color:rgba(255,247,239,.74)}.v2decor-panel output{display:block;min-height:19px;margin:8px 0;color:#fff}.v2decor-panel button{width:100%;padding:8px 10px;border:1px solid rgba(255,223,193,.34);border-radius:999px;background:rgba(255,255,255,.08);color:#ffe4cb;font:600 12px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;cursor:pointer}.v2decor-panel .v2decor-toggle{margin-bottom:9px;background:#f1a665;color:#371d19;border-color:#ffd0a6}.v2decor-panel.is-collapsed{width:auto;padding:7px;background:rgba(47,24,25,.88)}.v2decor-panel.is-collapsed .v2decor-toggle{width:auto;margin:0;padding:9px 13px}.v2decor-panel.is-collapsed .v2decor-body{display:none}
+    .v2decor-panel strong{display:block;margin-bottom:4px;color:#ffd4a9;font:700 15px/1.2 'Avenir Next','Arial Rounded MT Bold','Segoe UI',Arial,sans-serif}.v2decor-panel span{display:block;color:rgba(255,247,239,.74)}.v2decor-panel output{display:block;min-height:19px;margin:8px 0;color:#fff}.v2decor-panel button{width:100%;padding:8px 10px;border:1px solid rgba(255,223,193,.34);border-radius:999px;background:rgba(255,255,255,.08);color:#ffe4cb;font:600 12px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;cursor:pointer}.v2decor-panel .v2decor-toggle{margin-bottom:7px;background:#f1a665;color:#371d19;border-color:#ffd0a6}.v2decor-panel .v2decor-mode{margin-bottom:9px;background:#fff0e0;color:#371d19;border-color:#ffd0a6}.v2decor-panel.is-collapsed{width:auto;padding:7px;background:rgba(47,24,25,.88)}.v2decor-panel.is-collapsed .v2decor-toggle,.v2decor-panel.is-collapsed .v2decor-mode{width:auto;margin:0 0 6px;padding:9px 13px}.v2decor-panel.is-collapsed .v2decor-mode{margin-bottom:0}.v2decor-panel.is-collapsed .v2decor-body{display:none}
     .s19hero .s19ey,.s19hero .s19title,.s19hero .s19lead{position:relative;z-index:6}
     .v2materialanchor{position:relative;z-index:0;height:0;pointer-events:none}
     .v2materialanchor:before{content:"";position:absolute;left:50%;top:-245px;width:145%;height:2140px;transform:translateX(-50%);background:url("assets/brand/material-path.webp?v=20261006-edge-reset-1") center top/88% auto repeat-y;opacity:.65;pointer-events:none}
@@ -269,16 +270,28 @@
         element.style.bottom = 'auto';
       });
       document.body.classList.add('v2decor-edit');
+      if (profile !== 'mobile') document.body.classList.add('v2decor-drag');
       const panel = document.createElement('aside');
       panel.className = 'v2decor-panel is-collapsed';
       const profileNames = {'desktop-wide':'широкий десктоп','desktop-narrow':'ноутбук','mobile':'мобильная версия'};
-      panel.innerHTML = '<button class="v2decor-toggle" type="button" aria-expanded="false">PNG · ' + (profileNames[profile] || profile) + '</button><div class="v2decor-body"><strong>Расстановка PNG</strong><span>Перетаскивай объекты — всё сохраняется автоматически.</span><output>Выбери любой PNG</output><button class="v2decor-reset" type="button">Сбросить этот режим</button></div>';
+      panel.innerHTML = '<button class="v2decor-toggle" type="button" aria-expanded="false">PNG · ' + (profileNames[profile] || profile) + '</button><button class="v2decor-mode" type="button">Режим: листать</button><div class="v2decor-body"><strong>Расстановка PNG</strong><span>Сначала долистай до нужного места, затем включи режим «двигать PNG». Всё сохраняется автоматически.</span><output>Выбери любой PNG</output><button class="v2decor-reset" type="button">Сбросить этот режим</button></div>';
       document.body.append(panel);
       const output = panel.querySelector('output');
       panel.querySelector('.v2decor-toggle').addEventListener('click', event => {
         panel.classList.toggle('is-collapsed');
         event.currentTarget.setAttribute('aria-expanded', String(!panel.classList.contains('is-collapsed')));
       });
+      const modeButton = panel.querySelector('.v2decor-mode');
+      const syncMode = () => {
+        const dragging = document.body.classList.contains('v2decor-drag');
+        modeButton.textContent = dragging ? 'Режим: двигать PNG' : 'Режим: листать';
+        modeButton.setAttribute('aria-pressed', String(dragging));
+      };
+      modeButton.addEventListener('click', () => {
+        document.body.classList.toggle('v2decor-drag');
+        syncMode();
+      });
+      syncMode();
       const store = () => {
         const data = {};
         items.forEach(element => {
