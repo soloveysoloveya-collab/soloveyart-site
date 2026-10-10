@@ -1,0 +1,80 @@
+name: Deploy to Timeweb test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout site
+        uses: actions/checkout@v4
+
+      - name: Upload static site to Timeweb
+        env:
+          FTP_HOST: ${{ secrets.TIMEWEB_FTP_HOST }}
+          FTP_USER: ${{ secrets.TIMEWEB_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.TIMEWEB_FTP_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from ftplib import FTP, FTP_TLS, error_perm
+
+          host = os.environ['FTP_HOST']
+          user = os.environ['FTP_USER']
+          password = os.environ['FTP_PASSWORD']
+          target = '/soloveyart-test/public_html'
+
+          ftp = None
+          last_error = None
+          for client in (FTP_TLS, FTP):
+              candidate = client(timeout=30)
+              try:
+                  candidate.connect(host, 21)
+                  candidate.login(user, password)
+                  if isinstance(candidate, FTP_TLS):
+                      candidate.prot_p()
+                  candidate.set_pasv(True)
+                  ftp = candidate
+                  break
+              except Exception as exc:
+                  last_error = exc
+                  try:
+                      candidate.close()
+                  except Exception:
+                      pass
+          if ftp is None:
+              raise RuntimeError(f'FTP connection failed: {type(last_error).__name__}')
+
+          try:
+              ftp.cwd(target)
+          except Exception as exc:
+              raise RuntimeError(f'Timeweb target folder is unavailable: {target}') from exc
+
+          uploaded = 0
+          for path in sorted(Path('.').rglob('*')):
+              if not path.is_file() or path.is_symlink():
+                  continue
+              rel = path.as_posix()
+              if rel == '.git' or rel.startswith('.git/') or rel.startswith('.github/'):
+                  continue
+              parts = rel.split('/')
+              ftp.cwd(target)
+              for folder in parts[:-1]:
+                  try:
+                      ftp.cwd(folder)
+                  except error_perm:
+                      ftp.mkd(folder)
+                      ftp.cwd(folder)
+              with path.open('rb') as source:
+                  ftp.storbinary('STOR ' + parts[-1], source, blocksize=65536)
+              uploaded += 1
+
+          ftp.quit()
+          print(f'Uploaded {uploaded} files to {target}')
+          PY
