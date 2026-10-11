@@ -1,2 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /decor-editor.html
+
+Sitemap: https://soloveyart.ru/sitemap.xml
